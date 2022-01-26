@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <style>
+
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono&display=swap");
+* {
+  box-sizing: border-box;
+  font-family: "DM Mono", monospace;
+}
+
+.scene svg {
+  overflow: visible;
+}
+
+.edit-mode [data-active]:not([stroke]) {
+  filter: url(#drop-shadow);
+  stroke: #fff;
+  stroke-width: 6px;
+}
+
+textarea {
+  width: 30%;
+  height: 100%;
+  border: 0;
+  background-color: #153e52;
+  color: #51ebc7;
+  padding: 20px;
+  font-size: 13px;
+  font-family: DM Mono;
+  line-height: 2;
+  font-weight: normal;
+  outline: 0;
+  flex-shrink: 0;
+  resize: none;
+}
+textarea::-moz-placeholder {
+  font-size: 22px;
+  text-align: center;
+  line-height: 100vh;
+  color: #b9b8c3;
+}
+textarea:-ms-input-placeholder {
+  font-size: 22px;
+  text-align: center;
+  line-height: 100vh;
+  color: #b9b8c3;
+}
+textarea::placeholder {
+  font-size: 22px;
+  text-align: center;
+  line-height: 100vh;
+  color: #b9b8c3;
+}
+
+.scene {
+  flex-grow: 1;
+  border-right: 1px solid #ddd;
+  display: flex;
+  overflow: auto;
+  height: 100%;
+  max-height: 100vh;
+  padding: 16px;
+  position: relative;
+}
+.scene:empty:after {
+  content: "PREVIEW AREA";
+  font-size: 24px;
+  margin: auto;
+  color: #2c2c3c;
+}
+.scene svg {
+  margin: auto;
+}
+
+.app {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+}
+
+.editor {
+  width: 60px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  max-height: 100vh;
+  overflow: auto;
+  padding: 16px 0;
+}
+
+input {
+  width: 40px;
+  height: 30px;
+  padding: 0;
+  background-color: #fff;
+  border: 0;
+  position: relative;
+}
+input + input {
+  margin-top: 6px;
+}
+
+.copy-button {
+  position: fixed;
+  top: 10px;
+  left: calc(30% - 70px);
+  width: 60px;
+  height: 30px;
+  border: 0;
+  color: #fff;
+  background-color: #464f61;
+  outline: 0;
+  border: 1px;
+  z-index: 4;
+  display: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+    </style>
+    
+
+    <svg height="0" xmlns="http://www.w3.org/2000/svg" class="filter">
+        <filter id="drop-shadow">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="9" />
+          <feOffset dx="12" dy="12" result="offsetblur" />
+          <feFlood flood-color="rgba(0,0,0,0.4)" />
+          <feComposite in2="offsetblur" operator="in" />
+          <feMerge>
+            <feMergeNode />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </svg>
+      <div class="app">
+        <textarea placeholder="Paste SVG Code"></textarea>
+        <div class="scene"></div>
+        <div class="editor"></div>
+        <button class="copy-button">Copy</button>
+      </div>
+
+      <script>
+
+const textarea = document.querySelector('textarea');
+const scene = document.querySelector('.scene');
+const editor = document.querySelector('.editor');
+const copy = document.querySelector('.copy-button');
+
+textarea.addEventListener('input', (e) => {
+  const svgMarkup = e.target.value;
+  scene.innerHTML = svgMarkup;
+  const svg = scene.querySelector('svg');
+  editor.innerHTML = '';
+  copy.style.display = 'none';
+
+  if (svg) {
+    Editor(svg);
+    copy.style.display = 'block';
+  }
+});
+
+copy.addEventListener('click', () => {
+  textarea.select();
+  textarea.setSelectionRange(0, 999999);
+  document.execCommand("copy");
+}); 
+
+function Editor(svg) {
+  const svgNodes = svg.querySelectorAll(":scope *");
+  const createBlock = (val) => {
+    const input = document.createElement("input");
+    input.type = "color";
+    input.setAttribute("value", val);
+    editor.append(input);
+    return input;
+  };
+
+  const handleColors = (type, el) => {
+    const attr = el.getAttribute(type);
+    if (el.nodeName == 'g') el.classList.add('g');
+    if (attr && (attr.charAt(0) !== "none" || attr.charAt(0) !== "transparent")) {
+      const input = createBlock(attr);
+      input.addEventListener("input", (e) => {
+        const { value } = e.target;
+        el.setAttribute(type, value);
+      });
+
+      input.addEventListener("click", () => {
+        el.setAttribute('data-active', true);
+        svg.classList.add('edit-mode');
+      });
+
+      input.addEventListener("blur", () => {
+        el.removeAttribute('data-active');
+        svg.classList.remove('edit-mode');
+        textarea.value = svg.outerHTML;
+      });
+    }
+  };
+
+  handleColors("fill", svg);
+  handleColors("stroke", svg);
+
+  svgNodes.forEach((node) => {
+    handleColors("fill", node);
+    handleColors("stroke", node);
+  });
+}
+
+      </script>
+
+</body>
+</html>
